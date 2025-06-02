@@ -43,13 +43,6 @@ function DraggableTime({ id , onDelete}) {
     cursor: 'pointer',
   };
 
-
-  // return (
-  //   <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-  //     {id}
-  //   </div>
-  // );
-
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <div style={closeStyle} onClick={(e) => {
@@ -87,7 +80,11 @@ function DroppableColumn({ id, children }) {
 }
 
 export default function App() {
-  const [inputTime, setInputTime] = useState('');
+  // const [inputTime, setInputTime] = useState('');
+  const [startHour, setStartHour] = useState('');
+  const [startMinute, setStartMinute] = useState('');
+  const [endHour, setEndHour] = useState('');
+  const [endMinute, setEndMinute] = useState('');
   const [itemsByDay, setItemsByDay] = useState({
     已生成時間: [],
     星期一: [],
@@ -100,12 +97,43 @@ export default function App() {
   });
 
   const handleAddTime = () => {
-    if (inputTime.trim() === '') return;
+    // if (inputTime.trim() === '') return;
+    // setItemsByDay((prev) => ({
+    //   ...prev,
+    //   ['已生成時間']: [...prev['已生成時間'], inputTime],
+    // }));
+    // setInputTime('');
+    //以十進位數字轉換成整數 (確保JS無誤)
+    const sh = parseInt(startHour, 10);
+    const sm = parseInt(startMinute, 10);
+    const eh = parseInt(endHour, 10);
+    const em = parseInt(endMinute, 10);
+
+    // 驗證時間格式
+    const isValid = (n, min, max) => !isNaN(n) && n >= min && n <= max;
+    if (
+      !isValid(sh, 0, 23) ||
+      !isValid(sm, 0, 59) ||
+      !isValid(eh, 0, 23) ||
+      !isValid(em, 0, 59)
+    ) {
+      alert('請輸入有效的時間（小時: 0~23，分鐘: 0~59）');
+      return;
+    }
+
+    const format = (n) => (n < 10 ? `0${n}` : `${n}`); //正規化呈現
+    const formattedTime = `${format(sh)}:${format(sm)}-${format(eh)}:${format(em)}`;
+
     setItemsByDay((prev) => ({
       ...prev,
-      ['已生成時間']: [...prev['已生成時間'], inputTime],
+      ['已生成時間']: [...prev['已生成時間'], formattedTime],
     }));
-    setInputTime('');
+
+    // 清空輸入
+    setStartHour('');
+    setStartMinute('');
+    setEndHour('');
+    setEndMinute('');
   };
 
   const handleDragEnd = (event) => {
@@ -142,7 +170,7 @@ export default function App() {
   return (
     <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
       <h1 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>輸入工作的時間:</h1>
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+      {/* <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
         <input
           type="text"
           placeholder="例如 09:00-10:00"
@@ -160,6 +188,61 @@ export default function App() {
           style={{
             padding: '0.5rem 1rem',
             backgroundColor: '#10b981',
+            color: 'white',
+            borderRadius: '0.375rem',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          生成標籤
+        </button>
+      </div> */}
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '2rem' }}>
+        <input
+          type="number"
+          min="0"
+          max="23"
+          value={startHour}
+          onChange={(e) => setStartHour(e.target.value)}
+          placeholder="時"
+          style={{ width: '45px', padding: '0.3rem' }}
+        />
+        :
+        <input
+          type="number"
+          min="0"
+          max="59"
+          value={startMinute}
+          onChange={(e) => setStartMinute(e.target.value)}
+          placeholder="分"
+          style={{ width: '45px', padding: '0.3rem' }}
+        />
+        <span> ～ </span>
+        <input
+          type="number"
+          min="0"
+          max="23"
+          value={endHour}
+          onChange={(e) => setEndHour(e.target.value)}
+          placeholder="時"
+          style={{ width: '45px', padding: '0.3rem' }}
+        />
+        :
+        <input
+          type="number"
+          min="0"
+          max="59"
+          value={endMinute}
+          onChange={(e) => setEndMinute(e.target.value)}
+          placeholder="分"
+          style={{ width: '45px', padding: '0.3rem' }}
+        />
+
+        <button
+          onClick={handleAddTime}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: 'rgb(170, 184, 171)',
             color: 'white',
             borderRadius: '0.375rem',
             border: 'none',
