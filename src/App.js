@@ -1,5 +1,6 @@
 import './App.css';
 import React, { useState } from 'react';
+import { nanoid } from 'nanoid'; // 或任意產生唯一字串的方法
 import {
   DndContext,
   closestCenter,
@@ -9,14 +10,13 @@ import {
 
 const daysOfWeek = ['已生成時間', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
 
-function DraggableTime({ id , onDelete}) {
+function DraggableTime({ id , label, onDelete}) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id,
   });
 
   const style = {
     transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
-    // padding: '0.5rem 1rem',
     display: 'inline-block',
     margin: '0.5rem',
     backgroundColor: 'rgb(146, 166, 183)',
@@ -51,7 +51,7 @@ function DraggableTime({ id , onDelete}) {
       }}>×</div>
       {/*僅這個文字部分可拖曳*/}
       <span {...listeners} style={{ cursor: 'grab' }}>
-        {id}
+        {label}
       </span>
     </div>
   );
@@ -80,7 +80,6 @@ function DroppableColumn({ id, children }) {
 }
 
 export default function App() {
-  // const [inputTime, setInputTime] = useState('');
   const [startHour, setStartHour] = useState('');
   const [startMinute, setStartMinute] = useState('');
   const [endHour, setEndHour] = useState('');
@@ -97,12 +96,6 @@ export default function App() {
   });
 
   const handleAddTime = () => {
-    // if (inputTime.trim() === '') return;
-    // setItemsByDay((prev) => ({
-    //   ...prev,
-    //   ['已生成時間']: [...prev['已生成時間'], inputTime],
-    // }));
-    // setInputTime('');
     //以十進位數字轉換成整數 (確保JS無誤)
     const sh = parseInt(startHour, 10);
     const sm = parseInt(startMinute, 10);
@@ -126,7 +119,8 @@ export default function App() {
 
     setItemsByDay((prev) => ({
       ...prev,
-      ['已生成時間']: [...prev['已生成時間'], formattedTime],
+      ['已生成時間']: [...prev['已生成時間'], { id: nanoid(), label: formattedTime }],
+
     }));
 
     // 清空輸入
@@ -142,17 +136,38 @@ export default function App() {
     if (!over || active.id === over.id) return;
 
     const sourceDay = Object.keys(itemsByDay).find((day) =>
-      itemsByDay[day].includes(active.id)
+      itemsByDay[day].some(item => item.id === active.id)
     );
 
+    const targetDay = over.id;
     if (!sourceDay) return;
 
     setItemsByDay((prev) => {
       const newItems = { ...prev };
-      // 移除原本的位置
-      newItems[sourceDay] = newItems[sourceDay].filter((item) => item !== active.id);
-      // 新位置加入
-      newItems[over.id] = [...newItems[over.id], active.id];
+
+      const sourceItem = prev[sourceDay].find(item => item.id === active.id);
+      if (!sourceItem) return prev;
+
+      if (sourceDay === '已生成時間') {
+        // 複製一份並產生其 id
+        const newItem = {
+          id: nanoid(),
+          label: sourceItem.label,
+        };
+
+        // 避免重複加入
+        if (!newItems[targetDay].some(item => item.label === newItem.label)) {
+          newItems[targetDay] = [...newItems[targetDay], newItem];
+        }
+
+      } else {
+        // 正常移動
+        newItems[sourceDay] = newItems[sourceDay].filter(item => item.id !== active.id);
+        if (!newItems[targetDay].some(item => item.id === active.id)) {
+          newItems[targetDay] = [...newItems[targetDay], sourceItem];
+        }
+      }
+
       return newItems;
     });
   };
@@ -161,7 +176,8 @@ export default function App() {
     setItemsByDay((prev) => {
       const newItems = {};
       for (const day in prev) {
-        newItems[day] = prev[day].filter((item) => item !== id);
+        //newItems[day] = prev[day].filter((item) => item !== id);
+        newItems[day] = prev[day].filter((item) => item.id !== id);
       }
       return newItems;
     });
@@ -170,33 +186,6 @@ export default function App() {
   return (
     <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
       <h1 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>輸入工作的時間:</h1>
-      {/* <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        <input
-          type="text"
-          placeholder="例如 09:00-10:00"
-          value={inputTime}
-          onChange={(e) => setInputTime(e.target.value)}
-          style={{
-            padding: '0.5rem',
-            border: '1px solid #cbd5e1',
-            borderRadius: '0.375rem',
-            width: '200px',
-          }}
-        />
-        <button
-          onClick={handleAddTime}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: '#10b981',
-            color: 'white',
-            borderRadius: '0.375rem',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          生成標籤
-        </button>
-      </div> */}
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '2rem' }}>
         <input
           type="number"
@@ -258,7 +247,8 @@ export default function App() {
       <div style={{ marginBottom: '2rem' }}>
         <DroppableColumn id="已生成時間">
           {itemsByDay['已生成時間'].map((item) => (
-            <DraggableTime key={item} id={item} onDelete={handleDeleteTime}/>
+            // <DraggableTime key={item} id={item} onDelete={handleDeleteTime}/>
+            <DraggableTime key={item.id} id={item.id} label={item.label} onDelete={handleDeleteTime} />
           ))}
         </DroppableColumn>
       </div>
@@ -270,7 +260,8 @@ export default function App() {
           .map((day) => (
             <DroppableColumn key={day} id={day}>
               {itemsByDay[day].map((item) => (
-                <DraggableTime key={item} id={item} onDelete={handleDeleteTime}/>
+                // <DraggableTime key={item} id={item} onDelete={handleDeleteTime}/>
+                <DraggableTime key={item.id} id={item.id} label={item.label} onDelete={handleDeleteTime} />
               ))}
             </DroppableColumn>
           ))}
