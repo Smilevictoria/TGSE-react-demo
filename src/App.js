@@ -161,11 +161,18 @@ export default function App() {
         }
 
       } else {
+        // 正常移動：如果已存在相同 label，就不做移動
+        const duplicateExists = newItems[targetDay].some(item => item.label === sourceItem.label);
+        if (duplicateExists) {
+          // 不移動，保留原狀
+          return prev;
+        }
         // 正常移動
         newItems[sourceDay] = newItems[sourceDay].filter(item => item.id !== active.id);
-        if (!newItems[targetDay].some(item => item.id === active.id)) {
-          newItems[targetDay] = [...newItems[targetDay], sourceItem];
-        }
+        newItems[targetDay] = [...newItems[targetDay], sourceItem];
+        // if (!newItems[targetDay].some(item => item.id === active.id) && !newItems[targetDay].some(item => item.label === sourceItem.label)) {
+        //   newItems[targetDay] = [...newItems[targetDay], sourceItem];
+        // }
       }
 
       return newItems;
